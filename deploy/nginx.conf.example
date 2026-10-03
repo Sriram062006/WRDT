@@ -1,0 +1,23 @@
+# Serve the built frontend and proxy /api to the FastAPI service on ONE origin.
+# This avoids CORS entirely and is the recommended topology.
+# Terminate TLS here (e.g. Let's Encrypt / certbot); the API sends HSTS in production.
+server {
+    listen 80;
+    server_name wrdt.example.org;
+    # return 301 https://$host$request_uri;   # enable once TLS is configured
+
+    root /var/www/wrdt/dist;          # contents of wrdt-frontend/dist
+    index index.html;
+
+    client_max_body_size 10m;         # Excel imports
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /assets/ { expires 1y; add_header Cache-Control "public, immutable"; }
+    location / { try_files $uri /index.html; }   # SPA fallback
+}
